@@ -15,6 +15,7 @@ public sealed class Evaluator : IEvaluator
             LiteralNode l => l.Value,
             FunctionCallNode f => EvaluateFunction(f, variables),
             VariableNode v => EvaluateVariable(v, variables),
+            VariablePropertyNode vp => EvaluateVariableProperty(vp, variables),
             ObjectLiteralNode o => EvaluateObject(o, variables),
             ArrayLiteralNode a => EvaluateArray(a, variables),
             _ => throw new InvalidOperationException("Unknown AST node")
@@ -30,8 +31,42 @@ public sealed class Evaluator : IEvaluator
 
     private static object? EvaluateVariable(VariableNode v, IReadOnlyDictionary<string, string> variables)
     {
-        if (!variables.TryGetValue(v.Name, out var value)) throw new Exception($"Variable not defined: {v.Name}");
+        if (!TryResolveVariable(v.Name, variables, out var value)) throw new Exception($"Variable not defined: {v.Name}");
         return value;
+    }
+
+    private static object? EvaluateVariableProperty(VariablePropertyNode v, IReadOnlyDictionary<string, string> variables)
+    {
+        if (!TryResolveVariable(v.VarName, variables, out var raw)) throw new Exception($"Variable not defined: {v.VarName}");
+        // If value is JSON string, parse and get property
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(raw);
+            if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object && doc.RootElement.TryGetProperty(v.Property, out var prop))
+            {
+                return prop.ValueKind switch
+                {
+                    System.Text.Json.JsonValueKind.String => prop.GetString(),
+                    System.Text.Json.JsonValueKind.Number => prop.TryGetInt64(out var l) ? l : prop.GetDouble(),
+                    System.Text.Json.JsonValueKind.True => true,
+                    System.Text.Json.JsonValueKind.False => false,
+                    _ => prop.GetRawText()
+                };
+            }
+        }
+        catch { /* not JSON */ }
+        return null;
+    }
+
+    private static bool TryResolveVariable(string name, IReadOnlyDictionary<string, string> variables, out string value)
+    {
+        // Try exact
+        if (variables.TryGetValue(name, out value)) return true;
+        // Try with @ prefix
+        if (!name.StartsWith('@') && variables.TryGetValue("@" + name, out value)) return true;
+        // Try without @ prefix
+        if (name.StartsWith('@') && variables.TryGetValue(name.TrimStart('@'), out value)) return true;
+        return false;
     }
 
     private object EvaluateObject(ObjectLiteralNode node, IReadOnlyDictionary<string, string> variables)

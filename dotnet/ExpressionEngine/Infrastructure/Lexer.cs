@@ -26,6 +26,7 @@ public sealed class Lexer : ILexer
                 case '{': tokens.Add(new Token(TokenType.LeftBrace, "{", position++)); continue;
                 case '}': tokens.Add(new Token(TokenType.RightBrace, "}", position++)); continue;
                 case ':': tokens.Add(new Token(TokenType.Colon, ":", position++)); continue;
+                case '.': tokens.Add(new Token(TokenType.Dot, ".", position++)); continue;
                 case '<':
                 {
                     // Capture a simple XML literal until matching closing root tag
@@ -103,7 +104,14 @@ public sealed class Lexer : ILexer
             {
                 var start = position;
                 if (input[position] == '-' || input[position] == '+') position++;
-                while (position < input.Length && (char.IsAsciiDigit(input[position]) || input[position] == '.')) position++;
+                bool seenDot = false;
+                while (position < input.Length)
+                {
+                    if (char.IsAsciiDigit(input[position])) { position++; continue; }
+                    if (input[position] == '.' && !seenDot && position + 1 < input.Length && char.IsAsciiDigit(input[position + 1]))
+                    { seenDot = true; position++; continue; }
+                    break;
+                }
                 var lexeme = input[start..position];
                 tokens.Add(new Token(TokenType.Number, lexeme, start));
                 continue;

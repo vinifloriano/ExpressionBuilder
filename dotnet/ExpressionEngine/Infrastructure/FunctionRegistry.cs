@@ -75,17 +75,46 @@ public sealed class DefaultFunctionRegistry : IFunctionRegistry
                 if (args.Length < 1) throw new Exception("FIRST requires array");
                 if (args[0] is IEnumerable<object?> seq)
                 {
-                    foreach (var item in seq) return item;
-                    return null;
+                    using var e = seq.GetEnumerator();
+                    if (!e.MoveNext()) return null;
+                    var first = e.Current;
+                    if (first is string s1 && s1.Length > 1 && s1[0] == '[' && s1[^1] == ']')
+                    {
+                        try
+                        {
+                            using var doc = System.Text.Json.JsonDocument.Parse(s1);
+                            if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+                            {
+                                var en = doc.RootElement.EnumerateArray();
+                                if (en.MoveNext()) return en.Current.GetRawText();
+                                return null;
+                            }
+                        }
+                        catch { }
+                    }
+                    // If complex type, return JSON string
+                    if (first is IDictionary<string, object?> || (first is IEnumerable<object?> && first is not string))
+                    {
+                        return System.Text.Json.JsonSerializer.Serialize(first);
+                    }
+                    return first;
                 }
                 if (args[0] is Array arr) return arr.Length > 0 ? arr.GetValue(0) : null;
                 // Try to parse JSON array string
                 var s = args[0]?.ToString() ?? string.Empty;
                 if (s.StartsWith("[") && s.EndsWith("]"))
                 {
-                    // naive split for simple number arrays
-                    var parts = s.Trim('[', ']').Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                    return parts.Length > 0 ? parts[0] : null;
+                    try
+                    {
+                        using var doc = System.Text.Json.JsonDocument.Parse(s);
+                        if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+                        {
+                            var enumerator = doc.RootElement.EnumerateArray();
+                            if (enumerator.MoveNext()) return enumerator.Current.GetRawText();
+                            return null;
+                        }
+                    }
+                    catch { /* fallthrough */ }
                 }
                 throw new Exception("FIRST: argument must be an enumerable");
             }

@@ -7,6 +7,7 @@ public sealed record LiteralNode(object? Value) : AstNode;
 public sealed record FunctionCallNode(string Name, IReadOnlyList<AstNode> Arguments) : AstNode;
 
 public sealed record VariableNode(string Name) : AstNode;
+public sealed record VariablePropertyNode(string VarName, string Property) : AstNode;
 
 public sealed record ObjectLiteralNode(IReadOnlyDictionary<string, AstNodeOrLiteral> Properties) : AstNode;
 public sealed record ArrayLiteralNode(IReadOnlyList<AstNodeOrLiteral> Elements) : AstNode;

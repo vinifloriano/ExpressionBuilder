@@ -20,8 +20,30 @@ public sealed class Parser : IParser
         {
             s.Advance();
             var ident = s.Expect(TokenType.Identifier, "Expected identifier after @");
+            // Optional .Property access
+            if (s.Match(TokenType.Dot))
+            {
+                var prop = s.Expect(TokenType.Identifier, "Expected property after .");
+                s.Expect(TokenType.RightBracket, "Expected ] at the end of variable reference");
+                return new VariablePropertyNode(ident.Lexeme!, prop.Lexeme!);
+            }
             s.Expect(TokenType.RightBracket, "Expected ] at the end of variable reference");
             return new VariableNode(ident.Lexeme!);
+        }
+
+        // Variable without @: [name] or [name.prop] or ["name"].prop or [1].prop
+        if (s.Peek().Type is TokenType.Identifier or TokenType.Number or TokenType.String)
+        {
+            var nameTok = s.Advance();
+            var varName = nameTok.Lexeme!;
+            if (s.Match(TokenType.Dot))
+            {
+                var prop = s.Expect(TokenType.Identifier, "Expected property after .");
+                s.Expect(TokenType.RightBracket, "Expected ] at the end of variable reference");
+                return new VariablePropertyNode(varName, prop.Lexeme!);
+            }
+            s.Expect(TokenType.RightBracket, "Expected ] at the end of variable reference");
+            return new VariableNode(varName);
         }
 
         var func = s.Expect(TokenType.Function, "Expected function name or @variable after [");
@@ -55,8 +77,7 @@ public sealed class Parser : IParser
             TokenType.Number => new LiteralNode(ParseNumber(s.Advance().Lexeme!)),
             TokenType.Boolean => new LiteralNode(ParseBoolean(s.Advance().Lexeme!)),
             TokenType.LeftBracket =>
-                // lookahead: function/variable vs array literal
-                s.PeekNext().Type is TokenType.Function or TokenType.At ? ParseExpression(s) : ParseArrayLiteral(s),
+                LooksLikeExpression(s) ? ParseExpression(s) : ParseArrayLiteral(s),
             TokenType.LeftBrace => ParseObjectLiteral(s),
             _ => throw new Exception($"Unexpected token {t.Type}")
         };
@@ -94,9 +115,16 @@ public sealed class Parser : IParser
             TokenType.Number => new AstNodeOrLiteral(ParseNumber(s.Advance().Lexeme!)),
             TokenType.Boolean => new AstNodeOrLiteral(ParseBoolean(s.Advance().Lexeme!)),
             TokenType.LeftBrace => new AstNodeOrLiteral(ParseObjectLiteral(s)),
-            TokenType.LeftBracket => new AstNodeOrLiteral(s.PeekNext().Type is TokenType.Function or TokenType.At ? ParseExpression(s) : ParseArrayLiteral(s)),
+            TokenType.LeftBracket => new AstNodeOrLiteral(LooksLikeExpression(s) ? ParseExpression(s) : ParseArrayLiteral(s)),
             _ => throw new Exception("Unsupported value in object literal")
         };
+    }
+
+    private static bool LooksLikeExpression(State s)
+    {
+        // At [ position, peek next and decide if it begins an expression or an array literal
+        var next = s.PeekNext();
+        return next.Type is TokenType.Function or TokenType.At;
     }
 
     private static AstNode ParseArrayLiteral(State s)
@@ -110,11 +138,38 @@ public sealed class Parser : IParser
             switch (t.Type)
             {
                 case TokenType.String: elements.Add(new AstNodeOrLiteral(s.Advance().Lexeme)); break;
-                case TokenType.Number: elements.Add(new AstNodeOrLiteral(ParseNumber(s.Advance().Lexeme!))); break;
+                case TokenType.Number:
+                    // Support composite variable like 4.JsonArray
+                    if (s.PeekNext().Type == TokenType.Dot && s.PeekAt(2).Type == TokenType.Identifier)
+                    {
+                        var numTok = s.Advance(); // number
+                        s.Advance(); // dot
+                        var propTok = s.Expect(TokenType.Identifier, "Expected identifier after .");
+                        elements.Add(new AstNodeOrLiteral(new VariableNode(numTok.Lexeme! + "." + propTok.Lexeme!)));
+                    }
+                    else
+                    {
+                        elements.Add(new AstNodeOrLiteral(ParseNumber(s.Advance().Lexeme!)));
+                    }
+                    break;
                 case TokenType.Boolean: elements.Add(new AstNodeOrLiteral(ParseBoolean(s.Advance().Lexeme!))); break;
                 case TokenType.LeftBrace: elements.Add(new AstNodeOrLiteral(ParseObjectLiteral(s))); break;
+                case TokenType.Identifier:
+                {
+                    var nameTok = s.Advance();
+                    if (s.Match(TokenType.Dot))
+                    {
+                        var propTok = s.Expect(TokenType.Identifier, "Expected property after .");
+                        elements.Add(new AstNodeOrLiteral(new VariablePropertyNode(nameTok.Lexeme!, propTok.Lexeme!)));
+                    }
+                    else
+                    {
+                        elements.Add(new AstNodeOrLiteral(new VariableNode(nameTok.Lexeme!)));
+                    }
+                    break;
+                }
                 case TokenType.LeftBracket:
-                    elements.Add(new AstNodeOrLiteral(s.PeekNext().Type is TokenType.Function or TokenType.At ? ParseExpression(s) : ParseArrayLiteral(s)));
+                    elements.Add(new AstNodeOrLiteral(LooksLikeExpression(s) ? ParseExpression(s) : ParseArrayLiteral(s)));
                     break;
                 default:
                     throw new Exception("Unsupported array element");
@@ -140,6 +195,7 @@ public sealed class Parser : IParser
         public Token Advance() => _tokens[_pos++];
         public bool Match(TokenType type) { if (Peek().Type == type) { Advance(); return true; } return false; }
         public Token PeekNext() => _tokens[_pos + 1];
+        public Token PeekAt(int lookahead) => _tokens[_pos + lookahead];
         public Token Expect(TokenType type, string message)
         {
             if (Peek().Type != type) throw new Exception(message);

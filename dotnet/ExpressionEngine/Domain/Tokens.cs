@@ -13,6 +13,7 @@ public enum TokenType
     LeftBrace,
     RightBrace,
     Colon,
+    Dot,
     String,
     Number,
     Boolean,

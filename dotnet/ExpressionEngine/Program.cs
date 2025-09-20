@@ -18,10 +18,11 @@ internal static class Program
 
         var variables = new Dictionary<string, string>
         {
-            ["a"] = "1",
-            ["b"] = "2",
-            ["greeting"] = "Hello \"",
-            ["json"] = "{\"Name\":\"Test\"}",
+            ["@a"] = "1",
+            ["@b"] = "2",
+            ["@greeting"] = "Hello \"",
+            ["@json"] = "{\"Name\":\"Test\"}",
+            ["4.JsonArray"] = "[{\"Name\":\"Test\"},{\"Name\":\"Test2\"}]",
 
         };
 
@@ -34,8 +35,10 @@ internal static class Program
             "[CONCAT([@greeting], \"\\\" \", \"World\")]",
             "   [GETJSONPROPERTY({\"Name\":\"Test\"}, \"Name\")]",
             "[FIRST([1,2,3])]",
+            "[FIRST([1.2,2,3])]",
             "[GETJSONPROPERTY([@json], \"Name\")]",
-            "[GETXMLPROPERTY(<root><xml>v</xml></root>, \"xml\")]"
+            "[GETXMLPROPERTY(<root><xml>v</xml></root>, \"xml\")]",
+            "[FIRST([4.JsonArray])]"
         };
 
         foreach (var expr in samples)
@@ -54,13 +57,17 @@ internal static class Program
 
     private static string FormatValue(object? value)
     {
-        return value switch
+        if (value is null) return "null";
+        if (value is string s) return $"\"{s}\"";
+        if (value is bool b) return b ? "true" : "false";
+        try
         {
-            null => "null",
-            string s => $"\"{s}\"",
-            bool b => b ? "true" : "false",
-            _ => value.ToString() ?? ""
-        };
+            return System.Text.Json.JsonSerializer.Serialize(value);
+        }
+        catch
+        {
+            return value.ToString() ?? string.Empty;
+        }
     }
 }
 
