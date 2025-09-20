@@ -2,12 +2,31 @@ namespace ExpressionEngine.Tests;
 
 public class JsonAndArrayTests
 {
-    [Fact]
-    public void GetJsonProperty_Works()
+    [Theory]
+    [InlineData("[GETJSONPROPERTY({\"Name\":\"Test\"}, \"Name\")]", "Test")]
+    [InlineData("[GETJSONPROPERTY('{\"Name\":\"Test\"}', 'Name')]", "Test")]
+    [InlineData("[GETJSONPROPERTY('{\"a\":{\"b\":\"c\"}}', 'a.b')]", null)] // not supported
+    public void GetJsonProperty_Works(string expr, object expected)
     {
         var engine = TestHelper.CreateEngine();
-        var result = engine.Execute("[GETJSONPROPERTY({\"Name\":\"Test\"}, \"Name\")]", new Dictionary<string, string>());
-        result.Should().Be("Test");
+        var result = engine.Execute(expr, new Dictionary<string, string>());
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public void SetJsonProperty_Works()
+    {
+        var engine = TestHelper.CreateEngine();
+        var result = engine.Execute("[SETJSONPROPERTY({\"Name\":\"Test\"}, \"Name\", \"NewTest\")]", new Dictionary<string, string>()) as IDictionary<string, object?>;
+        result.Should().ContainKey("Name").WhoseValue.Should().Be("NewTest");
+    }
+
+    [Fact]
+    public void SetJsonProperty_OnString_Works()
+    {
+        var engine = TestHelper.CreateEngine();
+        var result = engine.Execute("[SETJSONPROPERTY('{\"Name\":\"Test\"}', 'Name', 'NewTest')]", new Dictionary<string, string>()) as IDictionary<string, object?>;
+        result.Should().ContainKey("Name").WhoseValue.Should().Be("NewTest");
     }
 
     [Fact]
@@ -18,20 +37,18 @@ public class JsonAndArrayTests
         result.Should().Be("ABC");
     }
 
-    [Fact]
-    public void First_On_ArrayLiteral_Works()
+    [Theory]
+    [InlineData("[FIRST([1,2,3])]", 1d)]
+    [InlineData("[FIRST([\"a\",\"b\",\"c\"])]", "a")]
+    [InlineData("[FIRST([])]", null)]
+    public void First_Works(string expr, object expected)
     {
         var engine = TestHelper.CreateEngine();
-        var result = engine.Execute("[FIRST([1,2,3])]", new Dictionary<string, string>());
-        Convert.ToDouble(result).Should().Be(1d);
-    }
-
-    [Fact]
-    public void First_On_StringArray_Works()
-    {
-        var engine = TestHelper.CreateEngine();
-        var result = engine.Execute("[FIRST([\"a\",\"b\",\"c\"]) ]", new Dictionary<string, string>());
-        result.Should().Be("a");
+        var result = engine.Execute(expr, new Dictionary<string, string>());
+        if (expected is double d)
+            Convert.ToDouble(result).Should().Be(d);
+        else
+            result.Should().Be(expected);
     }
 
     [Fact]
@@ -53,5 +70,3 @@ public class JsonAndArrayTests
         Convert.ToDouble(result).Should().Be(1d);
     }
 }
-
-

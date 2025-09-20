@@ -46,4 +46,116 @@ public class MoreTests
     }
 }
 
+public class LogicalFunctionsTests
+{
+    [Theory]
+    [InlineData("[EQUALS(1, 1)]", true)]
+    [InlineData("[EQUALS(1, 2)]", false)]
+    [InlineData("[EQUALS(\"a\", \"a\")]", true)]
+    [InlineData("[EQUALS(\"a\", \"b\")]", false)]
+    [InlineData("[EQUALS(true, true)]", true)]
+    [InlineData("[EQUALS(null, null)]", true)]
+    public void Equals_Works(string expr, bool expected)
+    {
+        var engine = TestHelper.CreateEngine();
+        ((bool)engine.Execute(expr, new Dictionary<string, string>())).Should().Be(expected);
+    }
 
+    [Theory]
+    [InlineData("[NOTEQUALS(1, 2)]", true)]
+    [InlineData("[NOTEQUALS(1, 1)]", false)]
+    public void NotEquals_Works(string expr, bool expected)
+    {
+        var engine = TestHelper.CreateEngine();
+        ((bool)engine.Execute(expr, new Dictionary<string, string>())).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("[GREATER(2, 1)]", true)]
+    [InlineData("[GREATER(1, 2)]", false)]
+    [InlineData("[GREATER(1, 1)]", false)]
+    public void Greater_Works(string expr, bool expected)
+    {
+        var engine = TestHelper.CreateEngine();
+        ((bool)engine.Execute(expr, new Dictionary<string, string>())).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("[LESS(1, 2)]", true)]
+    [InlineData("[LESS(2, 1)]", false)]
+    [InlineData("[LESS(1, 1)]", false)]
+    public void Less_Works(string expr, bool expected)
+    {
+        var engine = TestHelper.CreateEngine();
+        ((bool)engine.Execute(expr, new Dictionary<string, string>())).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("[GREATEROREQUALS(2, 1)]", true)]
+    [InlineData("[GREATEROREQUALS(1, 1)]", true)]
+    [InlineData("[GREATEROREQUALS(1, 2)]", false)]
+    public void GreaterOrEquals_Works(string expr, bool expected)
+    {
+        var engine = TestHelper.CreateEngine();
+        ((bool)engine.Execute(expr, new Dictionary<string, string>())).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("[LESSOREQUALS(1, 2)]", true)]
+    [InlineData("[LESSOREQUALS(1, 1)]", true)]
+    [InlineData("[LESSOREQUALS(2, 1)]", false)]
+    public void LessOrEquals_Works(string expr, bool expected)
+    {
+        var engine = TestHelper.CreateEngine();
+        ((bool)engine.Execute(expr, new Dictionary<string, string>())).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("[IF(true, \"a\", \"b\")]", "a")]
+    [InlineData("[IF(false, \"a\", \"b\")]", "b")]
+    [InlineData("[IF([GREATER(2,1)], 1, 0)]", 1d)]
+    public void If_Works(string expr, object expected)
+    {
+        var engine = TestHelper.CreateEngine();
+        engine.Execute(expr, new Dictionary<string, string>()).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("[AND(true, true, true)]", true)]
+    [InlineData("[AND(true, false, true)]", false)]
+    public void And_Works(string expr, bool expected)
+    {
+        var engine = TestHelper.CreateEngine();
+        ((bool)engine.Execute(expr, new Dictionary<string, string>())).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("[OR(false, true, false)]", true)]
+    [InlineData("[OR(false, false, false)]", false)]
+    public void Or_Works(string expr, bool expected)
+    {
+        var engine = TestHelper.CreateEngine();
+        ((bool)engine.Execute(expr, new Dictionary<string, string>())).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("[NOT(true)]", false)]
+    [InlineData("[NOT(false)]", true)]
+    public void Not_Works(string expr, bool expected)
+    {
+        var engine = TestHelper.CreateEngine();
+        ((bool)engine.Execute(expr, new Dictionary<string, string>())).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("[EMPTY(\"\")]", true)]
+    [InlineData("[EMPTY(\"a\")]", false)]
+    [InlineData("[EMPTY([])]", true)]
+    [InlineData("[EMPTY([1])]", false)]
+    [InlineData("[EMPTY(null)]", true)]
+    public void Empty_Works(string expr, bool expected)
+    {
+        var engine = TestHelper.CreateEngine();
+        ((bool)engine.Execute(expr, new Dictionary<string, string>())).Should().Be(expected);
+    }
+}

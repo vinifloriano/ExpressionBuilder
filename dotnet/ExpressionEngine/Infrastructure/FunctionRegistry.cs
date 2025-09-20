@@ -344,7 +344,11 @@ public sealed class DefaultFunctionRegistry : IFunctionRegistry
             ,
             ["SETXMLPROPERTY"] = (args, _) =>
             {
-                var xml = args[0]?.ToString() ?? "<root/>";
+                var xml = args[0]?.ToString();
+                if (string.IsNullOrEmpty(xml))
+                {
+                    xml = "<root />";
+                }
                 var doc = System.Xml.Linq.XDocument.Parse(xml);
                 var tag = args[1]?.ToString() ?? string.Empty;
                 var value = args[2]?.ToString() ?? string.Empty;

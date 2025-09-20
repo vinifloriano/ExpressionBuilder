@@ -129,6 +129,11 @@ public sealed class Lexer : ILexer
                     tokens.Add(new Token(TokenType.Boolean, "false", position));
                     position += 5; continue;
                 }
+                if (input.AsSpan(position).StartsWith("null"))
+                {
+                    tokens.Add(new Token(TokenType.Null, "null", position));
+                    position += 4; continue;
+                }
             }
 
             if (char.IsLetter(c) || c == '_')
