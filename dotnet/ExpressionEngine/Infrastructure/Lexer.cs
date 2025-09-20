@@ -26,6 +26,40 @@ public sealed class Lexer : ILexer
                 case '{': tokens.Add(new Token(TokenType.LeftBrace, "{", position++)); continue;
                 case '}': tokens.Add(new Token(TokenType.RightBrace, "}", position++)); continue;
                 case ':': tokens.Add(new Token(TokenType.Colon, ":", position++)); continue;
+                case '<':
+                {
+                    // Capture a simple XML literal until matching closing root tag
+                    var start = position;
+                    // find first tag name
+                    int i = position + 1;
+                    while (i < input.Length && char.IsWhiteSpace(input[i])) i++;
+                    int nameStart = i;
+                    while (i < input.Length && (char.IsLetterOrDigit(input[i]) || input[i] == '_' || input[i] == '-')) i++;
+                    var rootName = input[nameStart..i];
+                    int depth = 0;
+                    while (position < input.Length)
+                    {
+                        if (input[position] == '<')
+                        {
+                            if (position + 1 < input.Length && input[position + 1] == '/') depth--;
+                            else if (position + 1 < input.Length && char.IsLetter(input[position + 1])) depth++;
+                            // advance to next '>'
+                            position++;
+                            while (position < input.Length && input[position] != '>') position++;
+                            if (position < input.Length && input[position] == '>')
+                            {
+                                // self closing
+                                if (position - 1 >= 0 && input[position - 1] == '/') depth--;
+                                position++;
+                                if (depth == 0) break;
+                            }
+                        }
+                        else position++;
+                    }
+                    var xml = input[start..position];
+                    tokens.Add(new Token(TokenType.String, xml, start));
+                    continue;
+                }
                 case '"':
                 case '\'':
                 {

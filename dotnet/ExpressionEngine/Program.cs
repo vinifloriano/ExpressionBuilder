@@ -20,7 +20,9 @@ internal static class Program
         {
             ["a"] = "1",
             ["b"] = "2",
-            ["greeting"] = "Hello"
+            ["greeting"] = "Hello \"",
+            ["json"] = "{\"Name\":\"Test\"}",
+
         };
 
         var samples = new[]
@@ -31,7 +33,9 @@ internal static class Program
             "[ADD(  [@a]  ,   [@b])]",
             "[CONCAT([@greeting], \"\\\" \", \"World\")]",
             "   [GETJSONPROPERTY({\"Name\":\"Test\"}, \"Name\")]",
-            "[FIRST([1,2,3])]"
+            "[FIRST([1,2,3])]",
+            "[GETJSONPROPERTY([@json], \"Name\")]",
+            "[GETXMLPROPERTY(<root><xml>v</xml></root>, \"xml\")]"
         };
 
         foreach (var expr in samples)

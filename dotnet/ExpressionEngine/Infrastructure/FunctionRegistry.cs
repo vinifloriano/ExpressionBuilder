@@ -49,7 +49,23 @@ public sealed class DefaultFunctionRegistry : IFunctionRegistry
             ["GETJSONPROPERTY"] = (args, _) =>
             {
                 if (args.Length < 2) throw new Exception("GETJSONPROPERTY requires obj and key");
-                if (args[0] is not IDictionary<string, object?> dict) throw new Exception("GETJSONPROPERTY: obj must be a dictionary");
+                IDictionary<string, object?> dict;
+                if (args[0] is IDictionary<string, object?> d)
+                {
+                    dict = d;
+                }
+                else if (args[0] is string s)
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(s);
+                    if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+                        throw new Exception("GETJSONPROPERTY: JSON root must be an object");
+                    dict = JsonElementToObject(doc.RootElement) as IDictionary<string, object?>
+                        ?? throw new Exception("GETJSONPROPERTY: failed to parse JSON object");
+                }
+                else
+                {
+                    throw new Exception("GETJSONPROPERTY: obj must be a dictionary or JSON string");
+                }
                 var key = args[1]?.ToString() ?? string.Empty;
                 return dict.TryGetValue(key, out var val) ? val : null;
             }
@@ -231,20 +247,32 @@ public sealed class DefaultFunctionRegistry : IFunctionRegistry
             ,
             ["SETJSONPROPERTY"] = (args, _) =>
             {
-                if (args[0] is IDictionary<string, object?> dict3)
+                IDictionary<string, object?> dict;
+                if (args[0] is IDictionary<string, object?> d)
                 {
-                    var copy = new Dictionary<string, object?>(dict3, StringComparer.Ordinal)
-                    {
-                        [args[1]?.ToString() ?? string.Empty] = args[2]
-                    };
-                    return copy;
+                    dict = new Dictionary<string, object?>(d, StringComparer.Ordinal);
                 }
-                throw new Exception("SETJSONPROPERTY: obj must be a dictionary");
+                else if (args[0] is string s)
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(s);
+                    if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
+                        throw new Exception("SETJSONPROPERTY: JSON root must be an object");
+                    dict = (JsonElementToObject(doc.RootElement) as IDictionary<string, object?>)!
+                        ?? throw new Exception("SETJSONPROPERTY: failed to parse JSON object");
+                }
+                else
+                {
+                    throw new Exception("SETJSONPROPERTY: obj must be a dictionary or JSON string");
+                }
+                dict[args[1]?.ToString() ?? string.Empty] = args[2];
+                return dict;
             }
             ,
             ["GETXMLPROPERTY"] = (args, _) =>
             {
-                var doc = System.Xml.Linq.XDocument.Parse(args[0]?.ToString() ?? "<root/>");
+                var xmlInput = args[0];
+                var xmlString = xmlInput is string sxml ? sxml : xmlInput?.ToString() ?? "<root/>";
+                var doc = System.Xml.Linq.XDocument.Parse(xmlString);
                 var tag = args[1]?.ToString() ?? string.Empty;
                 var el = doc.Descendants(tag).FirstOrDefault();
                 return el != null ? el.Value : null;
@@ -267,6 +295,39 @@ public sealed class DefaultFunctionRegistry : IFunctionRegistry
                 return doc.ToString(System.Xml.Linq.SaveOptions.DisableFormatting);
             }
         };
+    }
+
+    private static object? JsonElementToObject(System.Text.Json.JsonElement element)
+    {
+        switch (element.ValueKind)
+        {
+            case System.Text.Json.JsonValueKind.Object:
+                var dict = new Dictionary<string, object?>(StringComparer.Ordinal);
+                foreach (var prop in element.EnumerateObject())
+                {
+                    dict[prop.Name] = JsonElementToObject(prop.Value);
+                }
+                return dict;
+            case System.Text.Json.JsonValueKind.Array:
+                var list = new List<object?>();
+                foreach (var el in element.EnumerateArray()) list.Add(JsonElementToObject(el));
+                return list;
+            case System.Text.Json.JsonValueKind.String:
+                return element.GetString();
+            case System.Text.Json.JsonValueKind.Number:
+                if (element.TryGetInt64(out var l)) return l;
+                if (element.TryGetDouble(out var d)) return d;
+                return element.GetRawText();
+            case System.Text.Json.JsonValueKind.True:
+                return true;
+            case System.Text.Json.JsonValueKind.False:
+                return false;
+            case System.Text.Json.JsonValueKind.Null:
+            case System.Text.Json.JsonValueKind.Undefined:
+                return null;
+            default:
+                return element.GetRawText();
+        }
     }
 
     public Func<object?[], IReadOnlyDictionary<string, string>, object?> Resolve(string name)
