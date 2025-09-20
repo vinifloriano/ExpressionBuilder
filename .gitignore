@@ -1,0 +1,48 @@
+# macOS
+.DS_Store
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+.tmp/
+.env
+.env.*
+*.log
+
+# VS Code
+.vscode/
+.history/
+
+# Coverage / Reports
+coverage/
+*.lcov
+
+# Yarn / PNPM
+.yarn/
+.pnp.*
+
+# Netlify / Vercel
+.netlify/
+.vercel/
+
+# .NET / C#
+**/bin/
+**/obj/
+*.user
+*.suo
+*.svclog
+TestResult*/
+*.ncrunch*
+_ReSharper*/
+*.DotSettings.user
+
+# IDEs
+.idea/
+*.iml
+
+# Others
+Thumbs.db
+*.tmp
+
+

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPaaS Expression Builder</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/devextreme@23.2/dist/css/dx.material.blue.light.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>IPaaS Expression Builder</h1>
+            <p>Build and test expressions for your integration workflows</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="input-section expression-area">
+                <div class="input-header">
+                    <h2>Expression Input</h2>
+                    <div class="example-expressions">
+                        <span class="example-label">Try these examples:</span>
+                        <button class="example-btn" data-expr='[ADD(1,2)]'>ADD(1,2)</button>
+                        <button class="example-btn" data-expr='[CONCAT("Hello", " ", "World")]'>CONCAT</button>
+                        <button class="example-btn" data-expr='[IF([EQUALS(1,2)], "True", "False")]'>IF/EQUALS</button>
+                        <button class="example-btn" data-expr='[MULTIPLY(5, [ADD(2,3)])]'>Nested</button>
+                    </div>
+                </div>
+                
+                <div class="textarea-container">
+                    <textarea 
+                        id="expressionInput" 
+                        placeholder="Enter your expression here, e.g., [ADD(1,2)]"
+                        spellcheck="false"
+                    ></textarea>
+                    <div class="textarea-overlay" id="syntaxOverlay"></div>
+                </div>
+                
+                <div class="controls">
+                    <div id="compileBtn" class="dx-button compile-btn"></div>
+                    <div id="clearBtn" class="dx-button clear-btn"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="function-browser dx-card">
+            <h3>Function Browser</h3>
+            <div class="browser-grid">
+                <div class="browser-column">
+                    <h4>Groups</h4>
+                    <div id="groupList"></div>
+                </div>
+                <div class="browser-column">
+                    <h4>Functions</h4>
+                    <div id="functionList"></div>
+                </div>
+                <div class="browser-column">
+                    <h4>Description</h4>
+                    <div id="functionDescription" class="function-description"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="variables-panel dx-card">
+            <h3>Variables</h3>
+            <div class="variables-grid">
+                <div class="var-form">
+                    <input id="varName" type="text" placeholder="name" class="dx-texteditor-input" />
+                    <input id="varValue" type="text" placeholder="value" class="dx-texteditor-input" />
+                    <div id="addVarBtn" class="dx-button"></div>
+                </div>
+                <div class="var-list" id="variablesList"></div>
+            </div>
+            <div class="var-help">Use variables via: <code>[@name]</code></div>
+        </div>
+
+        <div class="output-section dx-card">
+            <h2>Result</h2>
+            <div class="result-container">
+                <div id="resultOutput" class="result-output">
+                    <div class="placeholder">Result will appear here...</div>
+                </div>
+            </div>
+            <div class="debug-section">
+                <h3>Debug Info</h3>
+                <div class="debug-tabs">
+                    <button class="debug-tab active" data-tab="tokens">Tokens</button>
+                    <button class="debug-tab" data-tab="ast">AST</button>
+                    <button class="debug-tab" data-tab="steps">Steps</button>
+                </div>
+                <div class="debug-content">
+                    <div id="tokensDebug" class="debug-panel active">
+                        <pre id="tokensOutput"></pre>
+                    </div>
+                    <div id="astDebug" class="debug-panel">
+                        <pre id="astOutput"></pre>
+                    </div>
+                    <div id="stepsDebug" class="debug-panel">
+                        <pre id="stepsOutput"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/devextreme@23.2/dist/js/dx.all.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
