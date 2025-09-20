@@ -80,6 +80,7 @@ public sealed class Parser : IParser
             TokenType.String => new LiteralNode(s.Advance().Lexeme),
             TokenType.Number => new LiteralNode(ParseNumber(s.Advance().Lexeme!)),
             TokenType.Boolean => new LiteralNode(ParseBoolean(s.Advance().Lexeme!)),
+            TokenType.Null => new LiteralNode(ParseNull(s)),
             TokenType.LeftBracket =>
                 LooksLikeExpression(s) ? ParseExpression(s) : ParseArrayLiteral(s),
             TokenType.LeftBrace => ParseObjectLiteral(s),
@@ -118,6 +119,7 @@ public sealed class Parser : IParser
             TokenType.String => new AstNodeOrLiteral(s.Advance().Lexeme),
             TokenType.Number => new AstNodeOrLiteral(ParseNumber(s.Advance().Lexeme!)),
             TokenType.Boolean => new AstNodeOrLiteral(ParseBoolean(s.Advance().Lexeme!)),
+            TokenType.Null => new AstNodeOrLiteral(ParseNull(s)),
             TokenType.LeftBrace => new AstNodeOrLiteral(ParseObjectLiteral(s)),
             TokenType.LeftBracket => new AstNodeOrLiteral(LooksLikeExpression(s) ? ParseExpression(s) : ParseArrayLiteral(s)),
             _ => throw new Exception("Unsupported value in object literal")
@@ -189,6 +191,12 @@ public sealed class Parser : IParser
         => text.Contains('.') ? double.Parse(text, System.Globalization.CultureInfo.InvariantCulture) : int.Parse(text, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture);
 
     private static bool ParseBoolean(string text) => text == "true";
+
+    private static object? ParseNull(State s)
+    {
+        s.Advance();
+        return null;
+    }
 
     private sealed class State
     {

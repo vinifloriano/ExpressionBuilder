@@ -17,6 +17,7 @@ public enum TokenType
     String,
     Number,
     Boolean,
+    Null,
     Eof
 }
 
