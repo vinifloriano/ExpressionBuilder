@@ -49,12 +49,31 @@ public sealed class DefaultFunctionRegistry : IFunctionRegistry
             ["GETJSONPROPERTY"] = (args, _) =>
             {
                 if (args.Length < 2) throw new Exception("GETJSONPROPERTY requires obj and key");
+                object? source = args[0];
+                // Unwrap single-element enumerable/array
+                if (source is IEnumerable<object?> seq && source is not string)
+                {
+                    using var e = seq.GetEnumerator();
+                    if (e.MoveNext()) source = e.Current;
+                }
+                else if (source is Array arr && arr.Length > 0)
+                {
+                    source = arr.GetValue(0);
+                }
+
                 IDictionary<string, object?> dict;
-                if (args[0] is IDictionary<string, object?> d)
+                if (source is IDictionary<string, object?> d)
                 {
                     dict = d;
                 }
-                else if (args[0] is string s)
+                else if (source is System.Text.Json.JsonElement je)
+                {
+                    if (je.ValueKind != System.Text.Json.JsonValueKind.Object)
+                        throw new Exception("GETJSONPROPERTY: JSON root must be an object");
+                    dict = JsonElementToObject(je) as IDictionary<string, object?>
+                        ?? throw new Exception("GETJSONPROPERTY: failed to parse JSON object");
+                }
+                else if (source is string s)
                 {
                     using var doc = System.Text.Json.JsonDocument.Parse(s);
                     if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Object)
@@ -136,7 +155,23 @@ public sealed class DefaultFunctionRegistry : IFunctionRegistry
             ["MIN"] = (args, _) => args.Select(Convert.ToDouble).Min()
             ,
             // Strings & collections
-            ["SPLIT"] = (args, _) => (args[0]?.ToString() ?? string.Empty).Split(args[1]?.ToString() ?? string.Empty)
+            ["SPLIT"] = (args, _) =>
+            {
+                var sep = args.ElementAtOrDefault(1)?.ToString() ?? string.Empty;
+                if (args[0] is IEnumerable<object?> seq && args[0] is not string)
+                {
+                    var parts = new List<string>();
+                    foreach (var item in seq)
+                    {
+                        var s = item?.ToString() ?? string.Empty;
+                        if (sep.Length == 0) { foreach (var ch in s) parts.Add(ch.ToString()); }
+                        else parts.AddRange(s.Split(sep));
+                    }
+                    return parts.ToArray();
+                }
+                var input = args[0]?.ToString() ?? string.Empty;
+                return input.Split(sep);
+            }
             ,
             ["REPLACE"] = (args, _) => (args[0]?.ToString() ?? string.Empty).Replace(args[1]?.ToString() ?? string.Empty, args[2]?.ToString() ?? string.Empty)
             ,

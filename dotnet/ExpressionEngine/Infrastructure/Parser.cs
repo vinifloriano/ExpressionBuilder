@@ -19,7 +19,11 @@ public sealed class Parser : IParser
         if (s.Peek().Type == TokenType.At)
         {
             s.Advance();
-            var ident = s.Expect(TokenType.Identifier, "Expected identifier after @");
+            // Support uppercase names tokenized as Function (e.g., @JSON)
+            var next = s.Peek();
+            if (next.Type is not TokenType.Identifier and not TokenType.Function)
+                throw new Exception("Expected identifier after @");
+            var ident = s.Advance();
             // Optional .Property access
             if (s.Match(TokenType.Dot))
             {
